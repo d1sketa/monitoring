@@ -1,0 +1,2 @@
+# TYPE cron_app_processed_payments Counter
+cron_app_processed_payments 150
