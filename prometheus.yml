@@ -9,11 +9,11 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          # - alertmanager:9093
+          - localhost:9093
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
-  # - "first_rules.yml"
+  - "alerts.yml"
   # - "second_rules.yml"
 
 # A scrape configuration containing exactly one endpoint to scrape:
@@ -52,3 +52,9 @@ scrape_configs:
     - files:
       - '/opt/targets/*.json'
       refresh_interval: 10s
+
+  - job_name: 'other-dedian-hosts'
+    static_configs:
+    - targets:
+        - 192.168.0.68:9100
+        - 192.168.0.42:9100
