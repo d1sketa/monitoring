@@ -1,4 +1,0 @@
-./promtool check config prometheus.yml #Проверка конфигурации прометея
-echo 'cron_app_poocessed_users 100' | curl --data-binary @- http://127.0.0.1:9091/metrics/job/cron #Отправляет метрику в формате Prometheus на локальный сервер Prometheus PushGateway
-curl --data-binary @data_pushgateway.txt http://127.0.0.1:9091/metrics/job/cron #отправляет метрики в Prometheus PushGateway, который используется для временного хранения метрик из задач, которые не живут постоянно 
-./promtool tsdb list data/ #выполняет перечисление (листинг) всех TSDB (Time Series Database) блоков, находящихся в каталоге data/, который по умолчанию используется Prometheus для хранения временных рядов метрик.

@@ -1,5 +1,0 @@
-groups:
-- name: disk-space.rules
-  rules:
-  - record: job:total_avail_disk_space
-    expr: sum(node_filesystem_avail_bytes) by (job)
