@@ -1,0 +1,12 @@
+# prometheus/alert.rules.yml
+groups:
+  - name: test_alerts
+    rules:
+      - alert: TestAlert
+        expr: vector(1)
+        for: 1m
+        labels:
+          severity: "info"
+        annotations:
+          summary: "Это тестовый алерт"
+          description: "Это правило создано для проверки работы связки Prometheus -> Alertmanager."

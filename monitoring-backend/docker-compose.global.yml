@@ -1,0 +1,192 @@
+# docker-compose.global.yml
+version: '3.8'
+
+networks:
+  monitoring-net:
+    driver: bridge
+
+services:
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus_central
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  prometheus-dc1:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus_dc1
+    ports:
+      - "9191:9090" # Другой порт, чтобы не конфликтовать
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml # Можно использовать тот же конфиг для теста
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  prometheus-dc2:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus_dc2
+    ports:
+      - "9092:9090" # И еще один
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: node_exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    container_name: process_exporter
+    ports:
+      - "9256:9256"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  pushgateway:
+    image: prom/pushgateway:v1.8.0
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox_exporter
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox-exporter:/config
+    command:
+      - '--config.file=/config/config.yml'
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    container_name: nginx_exporter
+    command: -nginx.scrape-uri http://nginx/status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=credit_conveyor
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://user:password@postgres:5432/credit_conveyor?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  custom_exporter_bash:
+    build: ./custom_exporter_bash
+    container_name: custom_exporter_bash
+    ports:
+      - "9999:9999"
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+    networks:
+      - monitoring-net
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  postgres_data:
+  grafana_data:
